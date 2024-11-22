@@ -26,7 +26,7 @@ static __u8 scao_guid[GUID_LEN] = {
 	0xC9, 0x14, 0xD5, 0xAF
 };
 
-static int get_c0_log_page(int fd, char *format)
+static int get_c0_log_page(int fd, char *format, bool legacy)
 {
 	nvme_print_flags_t fmt;
 	__u8 *data;
@@ -76,7 +76,7 @@ static int get_c0_log_page(int fd, char *format)
 		}
 
 		/* print the data */
-		ocp_smart_extended_log(data, fmt);
+		ocp_smart_extended_log(data, legacy, fmt);
 	} else {
 		fprintf(stderr, "ERROR : OCP : Unable to read C0 data from buffer\n");
 	}
@@ -95,14 +95,17 @@ int ocp_smart_add_log(int argc, char **argv, struct command *cmd,
 
 	struct config {
 		char *output_format;
+		bool non_legacy;
 	};
 
 	struct config cfg = {
 		.output_format = "normal",
+		.non_legacy = false,
 	};
 
 	OPT_ARGS(opts) = {
 		OPT_FMT("output-format", 'o', &cfg.output_format, "output Format: normal|json"),
+		OPT_FLAG("non-legacy",   'b', &cfg.non_legacy,    "--non-legacy"),
 		OPT_END()
 	};
 
@@ -110,7 +113,7 @@ int ocp_smart_add_log(int argc, char **argv, struct command *cmd,
 	if (ret)
 		return ret;
 
-	ret = get_c0_log_page(dev_fd(dev), cfg.output_format);
+	ret = get_c0_log_page(dev_fd(dev), cfg.output_format, !cfg.non_legacy);
 	if (ret)
 		fprintf(stderr, "ERROR : OCP : Failure reading the C0 Log Page, ret = %d\n",
 			ret);
